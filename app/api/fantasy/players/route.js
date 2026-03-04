@@ -22,7 +22,8 @@ export async function GET() {
       );
     }
     const data = await res.json();
-    return Response.json(data);
+    const players = data.filter(p => ['1','2','3','4'].includes(String(p.positionId)));
+    return Response.json(players);
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }
