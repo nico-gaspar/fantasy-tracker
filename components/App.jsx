@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { fetchAllPlayers, enrichWithTrends } from "@/lib/playerData";
+import { fetchAllPlayers, enrichWithTrends, TEAM_CRESTS } from "@/lib/playerData";
 
 // ─── Mock fallback data ───────────────────────────────────────────────────────
 
@@ -38,6 +38,37 @@ const SORT_MODES = [
   { label: "Value",       key: "valueScore",        accent: false },
   { label: "Season Pts",  key: "totalSeasonPoints", accent: false },
 ];
+
+const TRANSLATIONS = {
+  en: {
+    title: "Player Tracker",
+    players: "Players",
+    seasonPts: "Season Pts",
+    ptsP90: "Pts / 90",
+    efficiency: "Efficiency",
+    reliability: "Reliability",
+    value: "Value",
+    last5: "Last 5",
+    price: "Price",
+    search: "Search players or clubs...",
+    buildMy11: "Best 11",
+    myLineups: "My Lineups",
+  },
+  es: {
+    title: "Rastreador de Jugadores",
+    players: "Jugadores",
+    seasonPts: "Pts Temporada",
+    ptsP90: "Pts / 90",
+    efficiency: "Eficiencia",
+    reliability: "Fiabilidad",
+    value: "Valor",
+    last5: "Últimos 5",
+    price: "Precio",
+    search: "Buscar jugadores o equipos...",
+    buildMy11: "Mejor 11",
+    myLineups: "Mis Alineaciones",
+  },
+};
 
 const POINTS_BRACKETS = [
   { label: "All",      min: 0,   max: Infinity },
@@ -126,7 +157,7 @@ const ScoreBar = ({ value, color }) => {
   if (value == null) return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <div style={{ flex: 1, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.06)" }} />
-      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontFamily: "'DM Mono', monospace", minWidth: 26, textAlign: "right" }}>—</span>
+      <span style={{ fontSize: 15, color: "rgba(255,255,255,0.2)", fontFamily: "'DM Mono', monospace", fontWeight: 500, minWidth: 26, textAlign: "right" }}>—</span>
     </div>
   );
   return (
@@ -134,26 +165,23 @@ const ScoreBar = ({ value, color }) => {
       <div style={{ flex: 1, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.06)" }}>
         <div style={{ width: `${value}%`, height: "100%", borderRadius: 2, background: color, transition: "width 0.6s ease" }} />
       </div>
-      <span style={{ fontSize: 13, fontWeight: 700, color: "#fff", fontFamily: "'DM Mono', monospace", minWidth: 26, textAlign: "right" }}>{value}</span>
+      <span style={{ fontSize: 15, fontWeight: 500, color: "#fff", fontFamily: "'DM Mono', monospace", minWidth: 26, textAlign: "right" }}>{value}</span>
     </div>
   );
 };
 
 const FormDots = ({ values }) => {
   if (!values?.length) return null;
-  const nonNull = values.filter(v => v != null);
-  const avg = nonNull.length ? nonNull.reduce((a, b) => a + b, 0) / nonNull.length : 0;
+  const last5 = values.slice(-5);
   return (
     <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-      {values.map((v, i) => {
-        const isRecent = i === values.length - 1;
-        const didPlay  = v != null;
+      {last5.map((v, i) => {
+        const didPlay = v != null && v > 0;
         return (
-          <div key={i} style={{
-            width: isRecent ? 10 : 8, height: isRecent ? 10 : 8, borderRadius: "50%",
-            background: !didPlay ? "rgba(255,255,255,0.05)" : v >= avg ? "#C8FF57" : "rgba(255,255,255,0.12)",
-            border: isRecent ? `2px solid ${didPlay ? "rgba(200,255,87,0.5)" : "rgba(255,255,255,0.1)"}` : "none",
-          }} title={didPlay ? `${v} pts` : "DNP"} />
+          <div key={i} title={v != null ? `${v} pts` : "DNP"} style={{
+            width: 8, height: 8, borderRadius: 4, flexShrink: 0,
+            background: didPlay ? "#C8FF57" : "rgba(255,255,255,0.12)",
+          }} />
         );
       })}
     </div>
@@ -187,17 +215,46 @@ const SortIcon = ({ col, sortCol, sortDir }) => (
 const PlayerAvatar = ({ player }) => {
   const [failed, setFailed] = useState(false);
   const initials = (player.name ?? "").split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? "").join("");
-  if (!player.image || failed) return (
-    <div style={{
-      width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
-      background: "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))",
-      border: "1px solid rgba(255,255,255,0.1)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", fontFamily: "'DM Mono', monospace",
-    }}>{initials}</div>
+  const showInjury = player.status && player.status !== "available";
+  const inner = (!player.image || failed)
+    ? (
+      <div style={{
+        width: 36, height: 36, borderRadius: 18, flexShrink: 0,
+        background: "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))",
+        border: "1px solid rgba(255,255,255,0.1)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 11, fontWeight: 500, color: "rgba(255,255,255,0.4)", fontFamily: "'DM Mono', monospace",
+      }}>{initials}</div>
+    )
+    : <img src={player.image} alt={player.name} onError={() => setFailed(true)}
+        style={{ width: 36, height: 36, borderRadius: 18, objectFit: "cover", flexShrink: 0, display: "block" }} />;
+
+  if (!showInjury) return inner;
+  return (
+    <div style={{ position: "relative", flexShrink: 0, width: 36, height: 36 }}>
+      {inner}
+      <div title={player.status} style={{
+        position: "absolute", top: -1, left: 27,
+        width: 8, height: 8, borderRadius: 7.5,
+        background: "#bd1e1e",
+        boxShadow: "0 0 4px rgba(189,30,30,0.6)",
+      }} />
+    </div>
   );
-  return <img src={player.image} alt={player.name} onError={() => setFailed(true)}
-    style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />;
+};
+
+const TeamCrest = ({ teamId, size = 16 }) => {
+  const [failed, setFailed] = useState(false);
+  const src = TEAM_CRESTS[teamId];
+  if (!src || failed) return null;
+  return (
+    <img
+      src={src}
+      alt=""
+      onError={() => setFailed(true)}
+      style={{ width: size, height: size, objectFit: "contain", flexShrink: 0, display: "block" }}
+    />
+  );
 };
 
 const StatusDot = ({ status }) => {
@@ -227,19 +284,20 @@ const SkeletonRows = () => (
   <>
     {Array(8).fill(null).map((_, i) => (
       <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-        <td style={{ padding: "14px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Shimmer style={{ width: 36, height: 36, borderRadius: "50%" }} />
-            <Shimmer style={{ width: 34, height: 20, borderRadius: 5, flexShrink: 0 }} />
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <Shimmer style={{ width: 100 + (i % 3) * 20, height: 13 }} />
-              <Shimmer style={{ width: 70, height: 10 }} />
+        <td style={{ padding: "8px 14px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <Shimmer style={{ width: 22, height: 22, borderRadius: 5, flexShrink: 0 }} />
+            <Shimmer style={{ width: 36, height: 36, borderRadius: 18, flexShrink: 0 }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              <Shimmer style={{ width: 90 + (i % 3) * 20, height: 13 }} />
+              <Shimmer style={{ width: 60, height: 10 }} />
             </div>
+            <Shimmer style={{ width: 38, height: 20, borderRadius: 4, flexShrink: 0, marginLeft: "auto" }} />
           </div>
         </td>
-        {[16,16,24,24,24,16,16].map((p, j) => (
-          <td key={j} style={{ padding: `14px ${p}px`, textAlign: "center" }}>
-            <Shimmer style={{ width: j < 2 ? 28 : j < 5 ? undefined : 50, height: j < 2 ? 15 : 4, margin: "0 auto" }} />
+        {[14,14,14,14,14,14,14].map((p, j) => (
+          <td key={j} style={{ padding: `${p}px`, textAlign: "center" }}>
+            <Shimmer style={{ width: j < 2 ? 28 : j < 5 ? undefined : 40, height: j < 2 ? 15 : j < 5 ? 4 : 8, margin: "0 auto" }} />
           </td>
         ))}
       </tr>
@@ -573,7 +631,7 @@ const AddPlayerModal = ({ allPlayers, usedIds, onSelect, onClose }) => {
 // Module-level normalise — used by SwapModal and App() search
 function normaliseStr(str) {
   return (str ?? "").toLowerCase().normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+    .replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, "").trim();
 }
 
 // SwapModal: fixed 500×480, fuzzy search with debounce, richer result rows
@@ -1133,6 +1191,7 @@ export default function App() {
   const [sortDir, setSortDir]       = useState("desc");
   const [sortMode, setSortMode]     = useState(null);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [selectedPlayerId, setSelectedPlayerId] = useState(null);
   const [posFilter, setPosFilter]           = useState("ALL");
   const [pointsBracket, setPointsBracket]   = useState(POINTS_BRACKETS[0]);
   const [valueTooltip, setValueTooltip]     = useState(false);
@@ -1145,6 +1204,10 @@ export default function App() {
   const [searchQuery, setSearchQuery]             = useState("");
   const [showSuggestions, setShowSuggestions]     = useState(false);
   const [highlightedId, setHighlightedId]         = useState(null);
+  const [lang, setLang]                           = useState(() => { try { return localStorage.getItem("lang") || "en"; } catch { return "en"; } });
+
+  const t = TRANSLATIONS[lang] ?? TRANSLATIONS.en;
+  const toggleLang = () => { const next = lang === "en" ? "es" : "en"; setLang(next); try { localStorage.setItem("lang", next); } catch {} };
   const [session, setSession]                     = useState(null); // null=loading, obj once resolved
   const rowRefs = useRef({});
 
@@ -1198,7 +1261,8 @@ export default function App() {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]/g, "");
+    .replace(/[^a-z0-9\s]/g, "")
+    .trim();
 
   const matchScore = (player, query) => {
     const q = normalise(query);
@@ -1222,6 +1286,7 @@ export default function App() {
 
   const handleSelectSuggestion = (player) => {
     setSearchQuery(player.name);
+    setSelectedPlayerId(player.fantasyId);
     setShowSuggestions(false);
     setHighlightedId(player.fantasyId);
     setTimeout(() => setHighlightedId(null), 1200);
@@ -1234,7 +1299,9 @@ export default function App() {
   const activeKey = sortMode?.key ?? sortCol;
   const filtered = players
     .filter(p => posFilter === "ALL" || p.position === posFilter)
-    .filter(p => !searchQuery || matchScore(p, searchQuery) > 30)
+    .filter(p => selectedPlayerId
+      ? p.fantasyId === selectedPlayerId
+      : !searchQuery || matchScore(p, searchQuery) > 30)
     .filter(p => (p.totalSeasonPoints ?? 0) >= pointsBracket.min && (p.totalSeasonPoints ?? 0) < pointsBracket.max)
     .sort((a, b) => sortDir === "desc" ? (b[activeKey] ?? 0) - (a[activeKey] ?? 0) : (a[activeKey] ?? 0) - (b[activeKey] ?? 0));
 
@@ -1250,14 +1317,14 @@ export default function App() {
   };
 
   const cols = [
-    { key: "name",              label: "Player",      sortable: false },
-    { key: "totalSeasonPoints", label: "Season Pts",  sortable: true },
-    { key: "pointsPer90",       label: "Pts / 90",    sortable: true },
-    { key: "efficiency",        label: "Efficiency",  sortable: true },
-    { key: "reliability",       label: "Reliability", sortable: true },
-    { key: "valueScore",        label: "Value",       sortable: true },
-    { key: "form",              label: "Last 5",      sortable: false },
-    { key: "price",             label: "Price",       sortable: true },
+    { key: "name",              label: t.players,    sortable: false },
+    { key: "totalSeasonPoints", label: t.seasonPts,  sortable: true },
+    { key: "pointsPer90",       label: t.ptsP90,     sortable: true },
+    { key: "efficiency",        label: t.efficiency, sortable: true },
+    { key: "reliability",       label: t.reliability, sortable: true },
+    { key: "valueScore",        label: t.value,      sortable: true },
+    { key: "form",              label: t.last5,      sortable: false },
+    { key: "price",             label: t.price,      sortable: true },
   ];
 
   return (
@@ -1288,10 +1355,16 @@ export default function App() {
               {dataSource === "live" && <div style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", letterSpacing: "0.1em", padding: "2px 8px", borderRadius: 4, background: "rgba(200,255,87,0.1)", border: "1px solid rgba(200,255,87,0.25)", color: "rgba(200,255,87,0.7)" }}>LIVE</div>}
               {dataSource === "mock" && <div style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", letterSpacing: "0.1em", padding: "2px 8px", borderRadius: 4, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.3)" }}>DEMO DATA</div>}
             </div>
-            <button onClick={() => setShowLineupsDrawer(true)} style={{ padding: "7px 16px", borderRadius: 8, fontSize: 11, fontFamily: "'DM Mono', monospace", letterSpacing: "0.08em", background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.45)", cursor: "pointer", transition: "all 0.15s" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)"; e.currentTarget.style.color = "#fff"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "rgba(255,255,255,0.45)"; }}
-            >My Lineups</button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button onClick={toggleLang} style={{ padding: "7px 12px", borderRadius: 8, fontSize: 11, fontFamily: "'DM Mono', monospace", letterSpacing: "0.08em", background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.45)", cursor: "pointer", transition: "all 0.15s" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)"; e.currentTarget.style.color = "#fff"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "rgba(255,255,255,0.45)"; }}
+              >{lang === "en" ? "EN" : "ES"}</button>
+              <button onClick={() => setShowLineupsDrawer(true)} style={{ padding: "7px 16px", borderRadius: 8, fontSize: 11, fontFamily: "'DM Mono', monospace", letterSpacing: "0.08em", background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.45)", cursor: "pointer", transition: "all 0.15s" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)"; e.currentTarget.style.color = "#fff"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "rgba(255,255,255,0.45)"; }}
+              >{t.myLineups}</button>
+            </div>
             {session?.authenticated && (
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", color: "rgba(255,255,255,0.4)" }}>
@@ -1305,12 +1378,10 @@ export default function App() {
                 >Logout</button>
               </div>
             )}
-            {session !== null && !session?.authenticated && (
-              <a href="/login" style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", color: "rgba(255,255,255,0.3)", textDecoration: "none", letterSpacing: "0.06em" }}>Login</a>
-            )}
+            {/* Login coming soon */}
           </div>
 
-          <h1 className="page-title" style={{ fontSize: 32, fontWeight: 800, color: "#fff", marginBottom: 20 }}>Player Tracker</h1>
+          <h1 className="page-title" style={{ fontSize: 32, fontWeight: 800, color: "#fff", marginBottom: 20 }}>{t.title}</h1>
 
           {/* Filter bar */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -1352,15 +1423,15 @@ export default function App() {
             <div style={{ position: "relative", width: 260 }}>
               <input
                 value={searchQuery}
-                onChange={e => { setSearchQuery(e.target.value); setShowSuggestions(true); }}
+                onChange={e => { setSearchQuery(e.target.value); setSelectedPlayerId(null); setShowSuggestions(true); }}
                 onFocus={() => setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                placeholder="Search players or clubs..."
+                placeholder={t.search}
                 style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "8px 32px 8px 36px", color: "#fff", fontFamily: "'DM Mono', monospace", fontSize: 12, outline: "none" }}
               />
               <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", opacity: 0.4, fontSize: 16, pointerEvents: "none" }}>⌕</span>
-              {searchQuery && (
-                <span onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", cursor: "pointer", opacity: 0.4, fontSize: 16, lineHeight: 1 }}>×</span>
+              {(searchQuery || selectedPlayerId) && (
+                <span onClick={() => { setSearchQuery(""); setSelectedPlayerId(null); }} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", cursor: "pointer", opacity: 0.4, fontSize: 16, lineHeight: 1 }}>×</span>
               )}
               {showSuggestions && suggestions.length > 0 && (
                 <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 300, background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, overflow: "hidden" }}>
@@ -1389,7 +1460,7 @@ export default function App() {
 
         {/* Tab bar */}
         <div style={{ display: "flex", gap: 0, marginBottom: 24, borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-          {[{ label: "Players", key: "table" }, { label: "Best 11", key: "lineup" }].map(tab => {
+          {[{ label: t.players, key: "table" }, { label: t.buildMy11, key: "lineup" }].map(tab => {
             const active = activeView === tab.key;
             return (
               <button key={tab.key} onClick={() => { setActiveView(tab.key); if (tab.key === "lineup") setPreloadedLineup(null); }} style={{
@@ -1427,7 +1498,7 @@ export default function App() {
                   <th key={col.key} className={["pointsPer90","efficiency","reliability","valueScore"].includes(col.key) ? "col-hide-mobile" : ""} onClick={() => col.sortable && handleSort(col.key)}
                     onMouseEnter={() => col.key === "valueScore" && setValueTooltip(true)}
                     onMouseLeave={() => col.key === "valueScore" && setValueTooltip(false)}
-                    style={{ padding: "14px 16px", textAlign: col.key === "name" ? "left" : "center", fontSize: 10, fontFamily: "'DM Mono', monospace", letterSpacing: "0.1em", color: sortCol === col.key ? (col.key === "valueScore" ? "#FF9F57" : "#C8FF57") : "rgba(255,255,255,0.35)", cursor: col.sortable ? "pointer" : "default", userSelect: "none", whiteSpace: "nowrap", transition: "color 0.15s", position: "relative" }}>
+                    style={{ padding: col.key === "name" ? "12px 14px" : col.key === "form" ? "12px 8px" : "12px 14px", textAlign: col.key === "name" ? "left" : "center", fontSize: 10, fontFamily: "'DM Mono', monospace", letterSpacing: "0.1em", color: sortCol === col.key ? (col.key === "valueScore" ? "#FF9F57" : "#C8FF57") : "rgba(255,255,255,0.35)", cursor: col.sortable ? "pointer" : "default", userSelect: "none", whiteSpace: "nowrap", transition: "color 0.15s", position: "relative" }}>
                     {col.label.toUpperCase()}
                     {col.key === "valueScore" && <span style={{ marginLeft: 4, fontSize: 9, color: "rgba(255,159,87,0.5)", border: "1px solid rgba(255,159,87,0.3)", borderRadius: "50%", width: 13, height: 13, display: "inline-flex", alignItems: "center", justifyContent: "center", verticalAlign: "middle", cursor: "help" }}>?</span>}
                     {col.sortable && <SortIcon col={col.key} sortCol={sortCol} sortDir={sortDir} />}
@@ -1452,8 +1523,10 @@ export default function App() {
                     className={highlightedId === player.fantasyId ? "row-highlighted" : ""}
                     onClick={() => setSelectedPlayer(isSelected ? null : player)}
                     style={{ cursor: "pointer", borderBottom: i < filtered.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none", background: highlightedId === player.fantasyId ? "rgba(200,255,87,0.12)" : isSelected ? "rgba(200,255,87,0.04)" : "transparent", outline: inCompare ? "1px solid rgba(200,255,87,0.35)" : "none", outlineOffset: -1 }}>
-                    <td style={{ padding: "14px 16px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+
+                    {/* ── Name cell ── */}
+                    <td style={{ padding: "8px 14px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <button onClick={e => { e.stopPropagation(); toggleCompare(player); }} style={{
                           flexShrink: 0, width: 22, height: 22, borderRadius: 5,
                           background: inCompare ? "rgba(200,255,87,0.15)" : "rgba(255,255,255,0.05)",
@@ -1465,29 +1538,52 @@ export default function App() {
                           {inCompare ? "✓" : "+"}
                         </button>
                         <span className="player-avatar-wrap"><PlayerAvatar player={player} /></span>
-                        <div style={{ padding: "2px 8px", borderRadius: 5, minWidth: 34, textAlign: "center", flexShrink: 0, background: pos.bg, border: `1px solid ${pos.border}`, fontSize: 9, color: pos.text, fontFamily: "'DM Mono', monospace", letterSpacing: "0.08em" }}>{player.position}</div>
-                        <div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: "#fff", fontFamily: "'Syne', sans-serif" }}>{player.name}</span>
-                            <StatusDot status={player.status} />
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: 1 }}>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", fontFamily: "'Syne', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", lineHeight: "19.5px" }}>{player.name}</div>
+                            <div className="player-club" style={{ display: "flex", alignItems: "center", gap: 5, lineHeight: "16.5px" }}>
+                              <TeamCrest teamId={player.teamId} size={13} />
+                              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", fontFamily: "'DM Mono', monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{player.club}</span>
+                            </div>
                           </div>
-                          <div className="player-club" style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontFamily: "'DM Mono', monospace", marginTop: 1 }}>{player.club}</div>
+                          <div style={{ flexShrink: 0, width: 38, padding: "2px 8px", borderRadius: 4, textAlign: "center", background: pos.bg, border: `1px solid ${pos.border}`, fontSize: 12, color: pos.text, fontFamily: "'DM Mono', monospace", letterSpacing: "0.06em", lineHeight: 1.5 }}>{player.position}</div>
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: "14px 16px", textAlign: "center" }}><span style={{ fontSize: 15, fontWeight: 800, color: "#fff", fontFamily: "'DM Mono', monospace" }}>{player.totalSeasonPoints ?? "—"}</span></td>
-                    <td className="col-hide-mobile" style={{ padding: "14px 16px", textAlign: "center" }}><span style={{ fontSize: 15, fontWeight: 800, color: "#fff", fontFamily: "'DM Mono', monospace" }}>{player.pointsPer90}</span></td>
-                    <td className="col-hide-mobile" style={{ padding: "14px 24px" }}><ScoreBar value={player.efficiency} color="#C8FF57" /></td>
-                    <td className="col-hide-mobile" style={{ padding: "14px 24px" }}><ScoreBar value={player.reliability} color="#57C8FF" /></td>
-                    <td className="col-hide-mobile" style={{ padding: "14px 24px" }}><ScoreBar value={player.valueScore ?? 0} color="#FF9F57" /></td>
-                    <td style={{ padding: "14px 16px", textAlign: "center" }}><div style={{ display: "flex", justifyContent: "center" }}><FormDots values={player.form} /></div></td>
-                    <td style={{ padding: "14px 16px", textAlign: "center", whiteSpace: "nowrap" }}>
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", fontFamily: "'DM Mono', monospace" }}>{player.price != null ? `€${player.price}m` : "—"}</span>
-                        {player.growthPct != null && player.growthPct !== 0 && (
-                          <span style={{ fontSize: 10, fontFamily: "'DM Mono', monospace", color: player.growthPct > 0 ? "#C8FF57" : "#FF5757" }}>{player.growthPct > 0 ? "▲" : "▼"} {Math.abs(player.growthPct)}%</span>
-                        )}
+
+                    {/* ── Season pts ── */}
+                    <td style={{ padding: 14, textAlign: "center" }}>
+                      <span style={{ fontSize: 15, fontWeight: 500, color: "#fff", fontFamily: "'DM Mono', monospace" }}>{player.totalSeasonPoints ?? "—"}</span>
+                    </td>
+
+                    {/* ── Pts / 90 ── */}
+                    <td className="col-hide-mobile" style={{ padding: 14, textAlign: "center" }}>
+                      <span style={{ fontSize: 15, fontWeight: 500, color: "#fff", fontFamily: "'DM Mono', monospace" }}>{player.pointsPer90}</span>
+                    </td>
+
+                    {/* ── Score bars ── */}
+                    <td className="col-hide-mobile" style={{ padding: 14 }}><ScoreBar value={player.efficiency}       color="#C8FF57" /></td>
+                    <td className="col-hide-mobile" style={{ padding: 14 }}><ScoreBar value={player.reliability}      color="#57C8FF" /></td>
+                    <td className="col-hide-mobile" style={{ padding: 14 }}><ScoreBar value={player.valueScore ?? 0}  color="#FF9F57" /></td>
+
+                    {/* ── Last 5 dots ── */}
+                    <td style={{ padding: "14px 8px" }}>
+                      <div style={{ display: "flex", justifyContent: "center" }}>
+                        <FormDots values={player.form} />
                       </div>
+                    </td>
+
+                    {/* ── Price + growth ── */}
+                    <td style={{ padding: "8px 14px", textAlign: "center", whiteSpace: "nowrap" }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: "#fff", fontFamily: "'DM Mono', monospace", lineHeight: 1.5 }}>
+                        {player.price != null ? `€ ${player.price}m` : "—"}
+                      </div>
+                      {player.growthPct != null && player.growthPct !== 0 && (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 3, marginTop: 1 }}>
+                          <span style={{ fontSize: 9, color: player.growthPct > 0 ? "#C8FF57" : "#FF5757", lineHeight: 1 }}>{player.growthPct > 0 ? "▲" : "▼"}</span>
+                          <span style={{ fontSize: 10, fontFamily: "'DM Mono', monospace", fontWeight: 500, color: player.growthPct > 0 ? "#C8FF57" : "#FF5757", lineHeight: 1.5 }}>{Math.abs(player.growthPct)}%</span>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );
