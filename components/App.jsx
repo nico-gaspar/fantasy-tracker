@@ -308,112 +308,175 @@ const SkeletonRows = () => (
 // ─── Detail panel ─────────────────────────────────────────────────────────────
 
 const DetailPanel = ({ player, onClose }) => {
-  const pos    = positionColors[player.position];
-  const scores = [player.efficiency, player.reliability, player.valueScore ?? 0].filter(v => v != null);
-  const gem    = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+  const pos     = positionColors[player.position];
   const formVals = player.form?.filter(v => v != null) ?? [];
   const formMax  = Math.max(...formVals, 1);
+  const last5    = (player.form ?? []).slice(-5);
+
+  const statBars = [
+    { label: "Value",       value: player.valueScore ?? 0,   color: "#FF9F57" },
+    { label: "Efficiency",  value: player.efficiency ?? 0,   color: "#C8FF57" },
+    { label: "Reliability", value: player.reliability ?? 0,  color: "#57C8FF" },
+  ];
+
+  const thisSeasonRows = [
+    { label: "Average Minutes", value: player.averageMinutes != null ? player.averageMinutes : "—" },
+    { label: "Points per 90",   value: player.pointsPer90   != null ? player.pointsPer90   : "—" },
+    { label: "Games Played",    value: player.gamesPlayed   != null ? player.gamesPlayed   : "—" },
+  ];
 
   return (
     <div style={{
-      position: "fixed", top: 0, right: 0, height: "100vh", width: "min(340px, 100vw)",
-      background: "#141414", borderLeft: "1px solid rgba(255,255,255,0.08)",
-      padding: 28, overflowY: "auto", zIndex: 100, animation: "slideIn 0.25s ease",
+      position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+      zIndex: 100, pointerEvents: "none",
     }}>
-      <button onClick={onClose} style={{
-        background: "rgba(255,255,255,0.06)", border: "none", color: "rgba(255,255,255,0.5)",
-        width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: 16, marginBottom: 24,
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}>×</button>
+      <div style={{
+        width: "min(420px, calc(100vw - 32px))", maxHeight: "90vh", overflowY: "auto",
+        background: "#141414", borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)",
+        padding: 24, display: "flex", flexDirection: "column", gap: 32,
+        animation: "slideIn 0.2s ease", pointerEvents: "all",
+      }}>
 
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 20 }}>
-        <PlayerAvatar player={player} />
-        <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <div style={{ padding: "3px 10px", borderRadius: 6, background: pos.bg, border: `1px solid ${pos.border}`, fontSize: 10, color: pos.text, fontFamily: "'DM Mono', monospace", letterSpacing: "0.1em" }}>
-              {player.position}
-            </div>
-            {player.status && player.status !== "available" && (
-              <div style={{ padding: "3px 8px", borderRadius: 6, fontSize: 9, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: statusColors[player.status], fontFamily: "'DM Mono', monospace", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                {player.status}
-              </div>
-            )}
-          </div>
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: "#fff", fontFamily: "'Syne', sans-serif", marginBottom: 3 }}>{player.name}</h2>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontFamily: "'DM Mono', monospace" }}>
-            {player.club}{player.price != null ? ` · €${player.price}m` : ""}
-            {player.priceTrend !== 0 && <TrendArrow trend={player.priceTrend} />}
-          </div>
+        {/* Header: × + Compare */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <button onClick={onClose} style={{
+            background: "rgba(255,255,255,0.06)", border: "none", color: "rgba(255,255,255,0.5)",
+            width: 38, height: 32, borderRadius: 8, cursor: "pointer", fontSize: 16,
+            display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Syne', sans-serif",
+            transition: "background 0.15s, color 0.15s",
+          }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.color = "#fff"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "rgba(255,255,255,0.5)"; }}
+          >×</button>
+          <button style={{
+            background: "rgba(255,255,255,0.06)", border: "none", color: "rgba(255,255,255,0.4)",
+            padding: "0 16px", height: 32, borderRadius: 8, cursor: "pointer", fontSize: 12,
+            fontFamily: "'DM Mono', monospace",
+          }}>Compare</button>
         </div>
-      </div>
 
-      <div style={{ background: "rgba(200,255,87,0.06)", border: "1px solid rgba(200,255,87,0.15)", borderRadius: 14, padding: 16, marginBottom: 20, textAlign: "center" }}>
-        <div style={{ fontSize: 11, color: "rgba(200,255,87,0.6)", fontFamily: "'DM Mono', monospace", letterSpacing: "0.1em", marginBottom: 6 }}>GEM SCORE</div>
-        <div style={{ fontSize: 48, fontWeight: 900, color: "#C8FF57", fontFamily: "'DM Mono', monospace", lineHeight: 1 }}>{gem ?? "—"}</div>
-        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontFamily: "'DM Mono', monospace", marginTop: 6 }}>out of 100</div>
-      </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 26 }}>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        {[
-          { label: "Efficiency",  sub: "Quality when playing",  color: "#C8FF57", bg: "rgba(200,255,87,0.04)",  border: "rgba(200,255,87,0.1)",  value: player.efficiency },
-          { label: "Reliability", sub: "Consistency of starts", color: "#57C8FF", bg: "rgba(87,200,255,0.04)",  border: "rgba(87,200,255,0.1)",  value: player.reliability },
-          { label: "Value",       sub: "Pts per €m",            color: "#FF9F57", bg: "rgba(255,159,87,0.04)", border: "rgba(255,159,87,0.1)", value: player.valueScore ?? 0 },
-        ].map(({ label, sub, color, bg, border, value }) => (
-          <div key={label} style={{ flex: 1, background: bg, border: `1px solid ${border}`, borderRadius: 12, padding: 12, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-            {value == null
-              ? <div style={{ width: 64, height: 64, borderRadius: "50%", border: "3px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "rgba(255,255,255,0.2)", fontFamily: "'DM Mono', monospace" }}>—</div>
-              : <ScoreRing value={value} color={color} size={64} />
-            }
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color, fontFamily: "'Syne', sans-serif" }}>{label}</div>
-              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", fontFamily: "'DM Mono', monospace", marginTop: 2 }}>{sub}</div>
+          {/* Player identity */}
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <PlayerAvatar player={player} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, color: "#fff", fontFamily: "'Syne', sans-serif", marginBottom: 2 }}>{player.name}</h2>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontFamily: "'DM Mono', monospace" }}>{player.club}</div>
             </div>
+            <div style={{
+              padding: "4px 10px", borderRadius: 6, fontSize: 10, letterSpacing: "0.1em",
+              background: pos.bg, border: `1px solid ${pos.border}`, color: pos.text,
+              fontFamily: "'DM Mono', monospace", flexShrink: 0,
+            }}>{player.position}</div>
           </div>
-        ))}
-      </div>
 
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: "'DM Mono', monospace", letterSpacing: "0.1em", marginBottom: 12 }}>KEY STATS</div>
-        {[
-          { label: "Total Season Points", value: player.totalSeasonPoints != null ? `${player.totalSeasonPoints} pts` : "—", raw: true },
-          { label: "Games Played",        value: player.gamesPlayed != null ? `${player.gamesPlayed}` : "—", raw: true },
-          { label: "Points per 90",       value: player.pointsPer90 ?? 0, suffix: "pts" },
-          { label: "Chances Created / 90",value: player.chancesCreated ?? 0, suffix: "" },
-          { label: "Price",               value: player.price != null ? `€${player.price}m` : "—", raw: true },
-        ].map(s => (
-          <div key={s.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontFamily: "'DM Mono', monospace" }}>{s.label}</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#fff", fontFamily: "'DM Mono', monospace" }}>
-              {s.raw ? s.value : `${s.value} ${s.suffix}`}
-            </span>
-          </div>
-        ))}
-      </div>
+          {/* Stats row: bars + right column */}
+          <div style={{ display: "flex", gap: 60, alignItems: "flex-start" }}>
 
-      {player.form?.length > 0 && (
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: "'DM Mono', monospace", letterSpacing: "0.1em", marginBottom: 12 }}>LAST {player.form.length} GAMES</div>
-          <div style={{ display: "flex", gap: 6 }}>
-            {player.form.map((pts, i) => {
-              const didPlay = pts != null;
-              return (
-                <div key={i} style={{ flex: 1, textAlign: "center" }}>
-                  <div style={{ height: 40, borderRadius: 6, marginBottom: 6, background: didPlay ? `rgba(200,255,87,${0.1 + (pts / formMax) * 0.5})` : "rgba(255,255,255,0.03)", display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 4 }}>
-                    <span style={{ fontSize: 10, fontFamily: "'DM Mono', monospace", fontWeight: 700, color: didPlay ? "#C8FF57" : "rgba(255,255,255,0.15)" }}>{didPlay ? pts : "—"}</span>
+            {/* Bar stats */}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 24, minWidth: 0 }}>
+              {statBars.map(({ label, value, color }) => (
+                <div key={label} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.32)", fontFamily: "'DM Mono', monospace" }}>{label}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                    <div style={{ flex: 1, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.06)", minWidth: 0 }}>
+                      <div style={{ width: `${value}%`, height: 4, borderRadius: 2, background: color }} />
+                    </div>
+                    <span style={{ fontSize: 15, fontWeight: 500, color: "#fff", fontFamily: "'DM Mono', monospace", flexShrink: 0 }}>{value || "—"}</span>
                   </div>
-                  <span style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", fontFamily: "'DM Mono', monospace" }}>GW{i + 1}</span>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+              ))}
+            </div>
 
-      {player.highlight && (
-        <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.04)", borderLeft: "2px solid rgba(200,255,87,0.4)" }}>
-          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontFamily: "'DM Mono', monospace" }}>↑ {player.highlight}</span>
+            {/* Right column: Season PTS + Price */}
+            <div style={{ width: 108, display: "flex", flexDirection: "column", gap: 18, alignItems: "flex-end", flexShrink: 0 }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: "'DM Mono', monospace", letterSpacing: "0.1em" }}>Season PTS</span>
+                <span style={{ fontSize: 24, color: "#fff", fontFamily: "'DM Mono', monospace", fontWeight: 300, lineHeight: 1.15 }}>
+                  {player.totalSeasonPoints ?? "—"}
+                </span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: "'DM Mono', monospace", letterSpacing: "0.1em" }}>Price</span>
+                <span style={{ fontSize: 24, color: "#fff", fontFamily: "'DM Mono', monospace", fontWeight: 300, lineHeight: 1.15, letterSpacing: "0.05em" }}>
+                  {player.price != null ? `€${Number(player.price).toFixed(3)}m` : "—"}
+                </span>
+                {player.priceTrend != null && player.priceTrend !== 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ fontSize: 8, color: player.priceTrend > 0 ? "#C8FF57" : "#FF7A7A" }}>
+                      {player.priceTrend > 0 ? "▲" : "▼"}
+                    </span>
+                    <span style={{ fontSize: 10, color: player.priceTrend > 0 ? "#C8FF57" : "#FF7A7A", fontFamily: "'DM Mono', monospace" }}>
+                      {Math.abs(player.priceTrend)}%
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Game performance panel */}
+          <div style={{
+            background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: 6, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 20,
+          }}>
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", fontFamily: "'DM Mono', monospace", letterSpacing: "0.1em" }}>
+              Game performance
+            </span>
+
+            {/* Last 5 GW cards */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.75)", fontFamily: "'DM Mono', monospace", letterSpacing: "0.1em", textTransform: "uppercase" }}>Last 5</span>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                {last5.length > 0 ? last5.map((pts, i) => {
+                  const didPlay = pts != null;
+                  const ratio   = didPlay ? pts / formMax : 0;
+                  const bgAlpha = didPlay ? 0.05 + ratio * 0.10 : 0.02;
+                  const bdAlpha = didPlay ? 0.2  + ratio * 0.40 : 0.08;
+                  return (
+                    <div key={i} style={{
+                      flex: 1, maxWidth: 52, display: "flex", flexDirection: "column", alignItems: "center",
+                      gap: 6, paddingTop: 9, paddingBottom: 5,
+                      background: didPlay ? `rgba(200,255,87,${bgAlpha})` : "rgba(255,255,255,0.02)",
+                      border: `1px solid ${didPlay ? `rgba(200,255,87,${bdAlpha})` : "rgba(255,255,255,0.08)"}`,
+                      borderRadius: 6,
+                    }}>
+                      <span style={{ fontSize: 9, color: didPlay ? "#C8FF57" : "rgba(255,255,255,0.25)", fontFamily: "'DM Mono', monospace" }}>
+                        GW{(player.form?.length ?? 5) - last5.length + i + 1}
+                      </span>
+                      <span style={{ fontSize: 15, fontWeight: 500, color: didPlay ? "#C8FF57" : "rgba(255,255,255,0.2)", fontFamily: "'DM Mono', monospace" }}>
+                        {didPlay ? pts : "—"}
+                      </span>
+                    </div>
+                  );
+                }) : (
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", fontFamily: "'DM Mono', monospace" }}>No data</span>
+                )}
+              </div>
+            </div>
+
+            {/* This season rows */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.75)", fontFamily: "'DM Mono', monospace", letterSpacing: "0.1em", textTransform: "uppercase" }}>This season</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+                {thisSeasonRows.map(({ label, value }, i) => (
+                  <div key={label}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", fontFamily: "'DM Mono', monospace", letterSpacing: "0.1em" }}>{label}</span>
+                      <span style={{ fontSize: 16, color: "#fff", fontFamily: "'DM Mono', monospace" }}>{value}</span>
+                    </div>
+                    {i < thisSeasonRows.length - 1 && (
+                      <div style={{ height: 1, background: "rgba(255,255,255,0.06)", marginTop: 13 }} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
         </div>
-      )}
+      </div>
     </div>
   );
 };
@@ -468,7 +531,7 @@ const LineupPlayerCard = ({ player, onSwap, dim = false }) => {
       <div style={{ display: "flex", gap: 5, fontSize: 9, color: "rgba(255,255,255,0.5)", fontFamily: "'DM Mono', monospace" }}>
         <span>{player.totalSeasonPoints ?? "—"} pts</span>
         <span style={{ color: "rgba(255,255,255,0.2)" }}>·</span>
-        <span>€{player.price ?? "—"}m</span>
+        <span>€{player.price != null ? Number(player.price).toFixed(3) : "—"}m</span>
       </div>
       <MiniFormBoxes values={player.form} />
       <button onClick={() => onSwap(player)} style={{
@@ -609,7 +672,7 @@ const AddPlayerModal = ({ allPlayers, usedIds, onSelect, onClose }) => {
                         <StatusDot status={p.status} />
                       </div>
                       <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: "'DM Mono', monospace" }}>
-                        {p.club} · {p.totalSeasonPoints ?? "—"} pts · €{p.price ?? "—"}m
+                        {p.club} · {p.totalSeasonPoints ?? "—"} pts · €{p.price != null ? Number(p.price).toFixed(3) : "—"}m
                       </div>
                     </div>
                     <div style={{ padding: "2px 7px", borderRadius: 4, background: pos.bg, border: `1px solid ${pos.border}`, color: pos.text, fontSize: 9, fontFamily: "'DM Mono', monospace", letterSpacing: "0.06em" }}>
@@ -758,7 +821,10 @@ const MySavedLineupsDrawer = ({ onLoad, onClose }) => {
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 99 }} />
       <div style={{ position: "fixed", top: 0, right: 0, width: "min(340px, 100vw)", height: "100vh", background: "#141414", borderLeft: "1px solid rgba(255,255,255,0.08)", padding: "28px 0", overflowY: "auto", zIndex: 100, animation: "slideIn 0.25s ease" }}>
         <div style={{ padding: "0 24px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.06)", border: "none", color: "rgba(255,255,255,0.5)", width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>×</button>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.06)", border: "none", color: "rgba(255,255,255,0.5)", width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16, transition: "background 0.15s, color 0.15s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.color = "#fff"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "rgba(255,255,255,0.5)"; }}
+          >×</button>
           <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: "'DM Mono', monospace", letterSpacing: "0.1em", marginBottom: 4 }}>SAVED LINEUPS</div>
           <div style={{ fontSize: 20, fontWeight: 800, color: "#fff", fontFamily: "'Syne', sans-serif" }}>My Lineups</div>
         </div>
@@ -907,7 +973,10 @@ const LineupBuilderModal = ({ players, preloaded, onClose, onSaved, inline = fal
         {/* Row 1: title + stats + save */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 28px 10px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            {!inline && <button onClick={onClose} style={{ background: "rgba(255,255,255,0.06)", border: "none", color: "rgba(255,255,255,0.5)", width: 36, height: 36, borderRadius: 8, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>}
+            {!inline && <button onClick={onClose} style={{ background: "rgba(255,255,255,0.06)", border: "none", color: "rgba(255,255,255,0.5)", width: 36, height: 36, borderRadius: 8, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.15s, color 0.15s" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.color = "#fff"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "rgba(255,255,255,0.5)"; }}
+            >×</button>}
             <div>
               <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", fontFamily: "'DM Mono', monospace", letterSpacing: "0.12em" }}>LINEUP BUILDER</div>
               <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", fontFamily: "'Syne', sans-serif" }}>Best Starting 11</div>
@@ -1091,7 +1160,10 @@ const CompareModal = ({ players, onClose }) => {
             <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", fontFamily: "'DM Mono', monospace", letterSpacing: "0.1em", marginBottom: 3 }}>COMPARE</div>
             <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", fontFamily: "'Syne', sans-serif" }}>{players.length} Players</div>
           </div>
-          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.06)", border: "none", color: "rgba(255,255,255,0.5)", width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.06)", border: "none", color: "rgba(255,255,255,0.5)", width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.15s, color 0.15s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.color = "#fff"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "rgba(255,255,255,0.5)"; }}
+          >×</button>
         </div>
 
         <div style={{ padding: "20px 24px" }}>
@@ -1154,7 +1226,7 @@ const CompareModal = ({ players, onClose }) => {
               {players.map(p => {
                 const win = isWinner(stat, p);
                 const val = p[stat.key];
-                const display = stat.key === "price"     ? (val != null ? `€${val}m` : "—")
+                const display = stat.key === "price"     ? (val != null ? `€${Number(val).toFixed(3)}m` : "—")
                               : stat.key === "growthPct"  ? (val != null ? `${val > 0 ? "+" : ""}${val}%` : "—")
                               : val ?? "—";
                 return (
@@ -1503,7 +1575,7 @@ export default function App() {
                     {col.key === "valueScore" && <span style={{ marginLeft: 4, fontSize: 9, color: "rgba(255,159,87,0.5)", border: "1px solid rgba(255,159,87,0.3)", borderRadius: "50%", width: 13, height: 13, display: "inline-flex", alignItems: "center", justifyContent: "center", verticalAlign: "middle", cursor: "help" }}>?</span>}
                     {col.sortable && <SortIcon col={col.key} sortCol={sortCol} sortDir={sortDir} />}
                     {col.key === "valueScore" && valueTooltip && (
-                      <div style={{ position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", zIndex: 200, background: "#1e1e1e", border: "1px solid rgba(255,159,87,0.25)", borderRadius: 10, padding: "10px 14px", width: 220, textAlign: "left", pointerEvents: "none" }}>
+                      <div style={{ position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", zIndex: 200, background: "#1e1e1e", border: "1px solid rgba(255,159,87,0.25)", borderRadius: 10, padding: "10px 14px", width: 220, textAlign: "left", pointerEvents: "none", whiteSpace: "normal" }}>
                         <div style={{ fontSize: 11, fontWeight: 700, color: "#FF9F57", fontFamily: "'Syne', sans-serif", marginBottom: 6 }}>Value Score</div>
                         <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontFamily: "'DM Mono', monospace", lineHeight: 1.6 }}>Points per game ÷ price, normalised within position so a budget DEF can compete with elite FWDs.</div>
                       </div>
@@ -1576,7 +1648,7 @@ export default function App() {
                     {/* ── Price + growth ── */}
                     <td style={{ padding: "8px 14px", textAlign: "center", whiteSpace: "nowrap" }}>
                       <div style={{ fontSize: 13, fontWeight: 500, color: "#fff", fontFamily: "'DM Mono', monospace", lineHeight: 1.5 }}>
-                        {player.price != null ? `€ ${player.price}m` : "—"}
+                        {player.price != null ? `€ ${Number(player.price).toFixed(3)}m` : "—"}
                       </div>
                       {player.growthPct != null && player.growthPct !== 0 && (
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 3, marginTop: 1 }}>
@@ -1593,7 +1665,7 @@ export default function App() {
         </div>
 
         <div style={{ marginTop: 12, fontSize: 11, color: "rgba(255,255,255,0.2)", fontFamily: "'DM Mono', monospace", display: "flex", justifyContent: "space-between" }}>
-          <span>Click any row to see the full player breakdown →</span>
+          <span>Click any row to see the full player breakdown</span>
           {!loading && <span>Showing {filtered.length} player{filtered.length !== 1 ? "s" : ""}{pointsBracket.label !== "All" ? ` · ${pointsBracket.label} pts` : ""}{sortMode ? ` · sorted by ${sortMode.label.replace(/[^\w\s]/g, "").trim()}` : ""}</span>}
         </div>
 
