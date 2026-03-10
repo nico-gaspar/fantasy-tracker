@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { fetchAllPlayers, enrichWithTrends, TEAM_CRESTS } from "@/lib/playerData";
+import { fetchAllPlayers, enrichWithTrends, recomputeGemScores, TEAM_CRESTS } from "@/lib/playerData";
 
 // ─── Mock fallback data ───────────────────────────────────────────────────────
 
@@ -101,13 +101,13 @@ const FORMATIONS = ["5-4-1", "5-3-2", "4-5-1", "4-4-2", "4-3-3", "3-5-2", "3-4-3
 
 const getGemScore = (p) => {
   if (p?.gemScore != null) return p.gemScore;
-  const eff = p?.efficiency;
-  const rel = p?.reliability;
-  const val = p?.valueScore;
-  if (eff != null && rel != null && val != null)
-    return Math.round(eff * 0.25 + rel * 0.40 + val * 0.35);
-  const scores = [eff, rel, val].filter(v => v != null);
-  return scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+  const eff    = p?.efficiency   ?? 0;
+  const rel    = p?.reliability  ?? 0;
+  const streak = p?.streakScore  ?? 0;
+  const growth = p?.growthScore  ?? 0;
+  const base   = (rel * 0.30) + (eff * 0.25) + (growth * 0.25) + (streak * 0.20);
+  const mult   = (p?.price ?? 0) > 0 && (p?.price ?? 0) < 30 ? 1.15 : 1.0;
+  return Math.min(100, Math.round(base * mult));
 };
 
 const getBestN = (pool, n) =>
@@ -1308,7 +1308,7 @@ export default function App() {
       .then(data => {
         if (cancelled) return;
         setPlayers(data); setDataSource("live"); setLoading(false);
-        enrichWithTrends(data).then(enriched => { if (!cancelled) setPlayers(enriched); }).catch(() => {});
+        enrichWithTrends(data).then(enriched => { if (!cancelled) setPlayers(recomputeGemScores(enriched)); }).catch(() => {});
       })
       .catch(() => {
         if (cancelled) return;
