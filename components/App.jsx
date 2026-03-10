@@ -53,6 +53,7 @@ const TRANSLATIONS = {
     search: "Search players or clubs...",
     buildMy11: "Best 11",
     myLineups: "My Lineups",
+    posAll: "ALL",
     valueTooltipTitle: "Value Score",
     valueTooltipBody: "Points per game ÷ price, normalised within position so a budget DEF can compete with elite FWDs.",
   },
@@ -69,6 +70,7 @@ const TRANSLATIONS = {
     search: "Buscar jugadores o equipos...",
     buildMy11: "Mejor 11",
     myLineups: "Mis Alineaciones",
+    posAll: "TODO",
     valueTooltipTitle: "Puntuación de Valor",
     valueTooltipBody: "Puntos por partido ÷ precio, normalizado por posición para que un DEF económico pueda competir con los mejores delanteros.",
   },
@@ -1464,9 +1466,10 @@ export default function App() {
             {["ALL", "FWD", "MID", "DEF", "GK"].map(pos => {
               const col = pos !== "ALL" ? positionColors[pos] : null;
               const active = posFilter === pos;
+              const label = pos === "ALL" ? t.posAll : pos;
               return (
                 <button key={pos} onClick={() => setPosFilter(pos)} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid", borderColor: active ? (col ? col.border : "rgba(200,255,87,0.4)") : "rgba(255,255,255,0.08)", background: active ? (col ? col.bg : "rgba(200,255,87,0.08)") : "transparent", color: active ? (col ? col.text : "#C8FF57") : "rgba(255,255,255,0.35)", fontSize: 11, fontFamily: "'DM Mono', monospace", letterSpacing: "0.08em", cursor: "pointer", transition: "all 0.15s" }}>
-                  {pos}
+                  {label}
                 </button>
               );
             })}
@@ -1622,7 +1625,7 @@ export default function App() {
                               <span style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", fontFamily: "'DM Mono', monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{player.club}</span>
                             </div>
                           </div>
-                          <div style={{ flexShrink: 0, width: 38, padding: "2px 8px", borderRadius: 4, textAlign: "center", background: pos.bg, border: `1px solid ${pos.border}`, fontSize: 12, color: pos.text, fontFamily: "'DM Mono', monospace", letterSpacing: "0.06em", lineHeight: 1.5 }}>{player.position}</div>
+                          <div style={{ flexShrink: 0, width: 38, boxSizing: "border-box", padding: "2px 8px", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", background: pos.bg, border: `1px solid ${pos.border}`, fontSize: 12, color: pos.text, fontFamily: "'DM Mono', monospace", letterSpacing: "0.06em", lineHeight: 1.5 }}>{player.position}</div>
                         </div>
                       </div>
                     </td>
