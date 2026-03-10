@@ -63,7 +63,7 @@ const TRANSLATIONS = {
     ptsP90: "Pts / 90",
     efficiency: "Eficiencia",
     reliability: "Fiabilidad",
-    value: "Gem Score",
+    value: "Puntuación Gema",
     last5: "Últimos 5",
     price: "Precio",
     search: "Buscar jugadores o equipos...",
