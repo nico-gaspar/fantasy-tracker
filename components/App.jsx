@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { fetchAllPlayers, enrichWithTrends, recomputeGemScores, TEAM_CRESTS } from "@/lib/playerData";
+import { fetchAllPlayers, enrichWithTrends, computeValueScores, TEAM_CRESTS } from "@/lib/playerData";
 
 // ─── Mock fallback data ───────────────────────────────────────────────────────
 
@@ -23,13 +23,12 @@ const rawMockPlayers = [
   { name: "Kepa",           club: "Chelsea",        position: "GK",  price: 4.1,  pointsPer90: 5.8,  efficiency: 71, reliability: 76, form: [6,4,7,5,6],    highlight: "Solid shot-stopper",       chancesCreated: 0   },
 ];
 
-const maxRawMockValue = Math.max(...rawMockPlayers.map(p => p.pointsPer90 / p.price));
-const mockPlayers = rawMockPlayers.map(p => ({
-  ...p, status: "available", priceTrend: 0, image: null,
-  valueScore: Math.round((p.pointsPer90 / p.price) / maxRawMockValue * 100),
+const rawMockWithMeta = rawMockPlayers.map(p => ({
+  ...p, status: "available", priceTrend: 0, growthPct: 0, image: null,
   totalSeasonPoints: Math.round(p.pointsPer90 * 22),
   gamesPlayed: 22,
 }));
+const mockPlayers = computeValueScores(rawMockWithMeta);
 
 // ─── Shared constants ─────────────────────────────────────────────────────────
 
@@ -1308,7 +1307,7 @@ export default function App() {
       .then(data => {
         if (cancelled) return;
         setPlayers(data); setDataSource("live"); setLoading(false);
-        enrichWithTrends(data).then(enriched => { if (!cancelled) setPlayers(recomputeGemScores(enriched)); }).catch(() => {});
+        enrichWithTrends(data).then(enriched => { if (!cancelled) setPlayers(computeValueScores(enriched)); }).catch(() => {});
       })
       .catch(() => {
         if (cancelled) return;
