@@ -53,6 +53,8 @@ const TRANSLATIONS = {
     search: "Search players or clubs...",
     buildMy11: "Best 11",
     myLineups: "My Lineups",
+    valueTooltipTitle: "Value Score",
+    valueTooltipBody: "Points per game ÷ price, normalised within position so a budget DEF can compete with elite FWDs.",
   },
   es: {
     title: "Rastreador de Jugadores",
@@ -67,6 +69,8 @@ const TRANSLATIONS = {
     search: "Buscar jugadores o equipos...",
     buildMy11: "Mejor 11",
     myLineups: "Mis Alineaciones",
+    valueTooltipTitle: "Puntuación de Valor",
+    valueTooltipBody: "Puntos por partido ÷ precio, normalizado por posición para que un DEF económico pueda competir con los mejores delanteros.",
   },
 };
 
@@ -1576,8 +1580,8 @@ export default function App() {
                     {col.sortable && <SortIcon col={col.key} sortCol={sortCol} sortDir={sortDir} />}
                     {col.key === "valueScore" && valueTooltip && (
                       <div style={{ position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", zIndex: 200, background: "#1e1e1e", border: "1px solid rgba(255,159,87,0.25)", borderRadius: 10, padding: "10px 14px", width: 220, textAlign: "left", pointerEvents: "none", whiteSpace: "normal" }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: "#FF9F57", fontFamily: "'Syne', sans-serif", marginBottom: 6 }}>Value Score</div>
-                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontFamily: "'DM Mono', monospace", lineHeight: 1.6 }}>Points per game ÷ price, normalised within position so a budget DEF can compete with elite FWDs.</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#FF9F57", fontFamily: "'Syne', sans-serif", marginBottom: 6 }}>{t.valueTooltipTitle}</div>
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontFamily: "'DM Mono', monospace", lineHeight: 1.6 }}>{t.valueTooltipBody}</div>
                       </div>
                     )}
                   </th>
