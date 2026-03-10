@@ -34,7 +34,7 @@ const mockPlayers = computeValueScores(rawMockWithMeta);
 
 const SORT_MODES = [
   { label: "🔥 Rising",  key: "growthPct",         accent: true  },
-  { label: "Value",       key: "valueScore",        accent: false },
+  { label: "Gem Score",   key: "valueScore",        accent: false },
   { label: "Season Pts",  key: "totalSeasonPoints", accent: false },
 ];
 
@@ -46,7 +46,7 @@ const TRANSLATIONS = {
     ptsP90: "Pts / 90",
     efficiency: "Efficiency",
     reliability: "Reliability",
-    value: "Value",
+    value: "Gem Score",
     last5: "Last 5",
     price: "Price",
     search: "Search players or clubs...",
@@ -63,7 +63,7 @@ const TRANSLATIONS = {
     ptsP90: "Pts / 90",
     efficiency: "Eficiencia",
     reliability: "Fiabilidad",
-    value: "Valor",
+    value: "Gem Score",
     last5: "Últimos 5",
     price: "Precio",
     search: "Buscar jugadores o equipos...",
@@ -319,7 +319,7 @@ const DetailPanel = ({ player, onClose }) => {
   const last5    = (player.form ?? []).slice(-5);
 
   const statBars = [
-    { label: "Value",       value: player.valueScore ?? 0,   color: "#FF9F57" },
+    { label: "Gem Score",   value: player.valueScore ?? 0,   color: "#FF9F57" },
     { label: "Efficiency",  value: player.efficiency ?? 0,   color: "#C8FF57" },
     { label: "Reliability", value: player.reliability ?? 0,  color: "#57C8FF" },
   ];
